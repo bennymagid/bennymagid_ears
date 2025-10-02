@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benny's Ears</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>👂 What's in <a href = "https://open.spotify.com/user/1287562186">Benny's Ears</a> 👂</h1>
-            <subtitle>Powered by <a href = "https://www.last.fm/api#getting-started">Last.fm API</a> - see my <a href = "https://www.last.fm/user/bmahid">profile</a> for more</a></subtitle>
+            <h1>👂 What's in <a href = "https://bennymagid.com">Benny's</a> Ears 👂</h1>
+            <subtitle>Powered by <a href = "https://www.last.fm/api#getting-started">Last.fm API</a> - see my <a href = "https://www.last.fm/user/bmahid">Last.fm</a> or my <a href = "https://open.spotify.com/user/1287562186">Spotify</a> for more</a></subtitle>
         </header>
 
         <section class="last-played-hero" id="last-played">
@@ -38,8 +38,12 @@
                 <div class="loading">Loading tracks...</div>
             </div>
         </section>
+
+        <footer class="footer">
+            Made with ❤️ by <a href="https://bennymagid.com">Benny Magid</a>
+        </footer>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

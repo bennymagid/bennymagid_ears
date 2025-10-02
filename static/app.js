@@ -27,7 +27,7 @@ function getHipsterColor(score) {
 
 async function loadLastPlayed() {
     try {
-        const response = await fetch('/api/lastfm/last-played');
+        const response = await fetch('api/lastfm/last-played');
         const track = await response.json();
 
         const container = document.getElementById('last-played');
@@ -58,7 +58,7 @@ async function loadLastPlayed() {
 
 async function loadTracks() {
     try {
-        const response = await fetch('/api/lastfm/recent-tracks');
+        const response = await fetch('api/lastfm/recent-tracks');
         const tracks = await response.json();
 
         const tracksContainer = document.getElementById('tracks');
@@ -85,7 +85,7 @@ async function loadTracks() {
 
 async function loadTopArtists() {
     try {
-        const response = await fetch('/api/lastfm/top-artists');
+        const response = await fetch('api/lastfm/top-artists');
         const artists = await response.json();
 
         const artistsContainer = document.getElementById('top-artists');
@@ -112,7 +112,7 @@ async function loadTopArtists() {
 
 async function loadTopArtistsYear() {
     try {
-        const response = await fetch('/api/lastfm/top-artists-year');
+        const response = await fetch('api/lastfm/top-artists-year');
         const artists = await response.json();
 
         const artistsContainer = document.getElementById('top-artists-year');

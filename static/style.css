@@ -378,3 +378,22 @@ header h1 {
         margin-top: 8px;
     }
 }
+
+/* Footer */
+.footer {
+    text-align: center;
+    padding: 40px 20px;
+    margin-top: 60px;
+    color: var(--ctp-subtext0);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--ctp-surface1);
+}
+
+.footer a {
+    color: var(--ctp-mauve);
+    font-weight: 600;
+}
+
+.footer a:hover {
+    color: var(--ctp-lavender);
+}
