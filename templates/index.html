@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benny's Ears</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👂 What's in <a href = "https://open.spotify.com/user/1287562186">Benny's Ears</a> 👂</h1>
+            <subtitle>Powered by <a href = "https://www.last.fm/api#getting-started">Last.fm API</a> - see my <a href = "https://www.last.fm/user/bmahid">profile</a> for more</a></subtitle>
+        </header>
+
+        <section class="last-played-hero" id="last-played">
+            <div class="loading">Loading current track...</div>
+        </section>
+
+        <section class="top-artists-section">
+            <h2 class="section-title">📊 Top Artists This Week</h2>
+            <div id="top-artists" class="top-artists-list">
+                <div class="loading">Loading top artists...</div>
+            </div>
+        </section>
+
+        <section class="top-artists-section">
+            <h2 class="section-title">🏆 Top Artists of 2025</h2>
+            <div id="top-artists-year" class="top-artists-list">
+                <div class="loading">Loading yearly top artists...</div>
+            </div>
+        </section>
+
+        <section class="top-artists-section"></section>
+            <h2 class="section-title">⏱️ Recently Played</h2>
+            <div id="tracks" class="tracks-grid">
+                <div class="loading">Loading tracks...</div>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
