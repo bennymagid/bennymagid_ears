@@ -1,5 +1,5 @@
-/* Catppuccin Mocha Color Palette */
-:root {
+/* Catppuccin Mocha Color Palette (Dark) */
+:root, :root[data-theme="dark"] {
     --ctp-rosewater: #f5e0dc;
     --ctp-flamingo: #f2cdcd;
     --ctp-pink: #f5c2e7;
@@ -26,6 +26,36 @@
     --ctp-base: #1e1e2e;
     --ctp-mantle: #181825;
     --ctp-crust: #11111b;
+}
+
+/* Catppuccin Latte Color Palette (Light) */
+:root[data-theme="light"] {
+    --ctp-rosewater: #dc8a78;
+    --ctp-flamingo: #dd7878;
+    --ctp-pink: #ea76cb;
+    --ctp-mauve: #8839ef;
+    --ctp-red: #d20f39;
+    --ctp-maroon: #e64553;
+    --ctp-peach: #fe640b;
+    --ctp-yellow: #df8e1d;
+    --ctp-green: #40a02b;
+    --ctp-teal: #179299;
+    --ctp-sky: #04a5e5;
+    --ctp-sapphire: #209fb5;
+    --ctp-blue: #1e66f5;
+    --ctp-lavender: #7287fd;
+    --ctp-text: #4c4f69;
+    --ctp-subtext1: #5c5f77;
+    --ctp-subtext0: #6c6f85;
+    --ctp-overlay2: #7c7f93;
+    --ctp-overlay1: #8c8fa1;
+    --ctp-overlay0: #9ca0b0;
+    --ctp-surface2: #acb0be;
+    --ctp-surface1: #bcc0cc;
+    --ctp-surface0: #ccd0da;
+    --ctp-base: #eff1f5;
+    --ctp-mantle: #e6e9ef;
+    --ctp-crust: #dce0e8;
 }
 
 * {
@@ -85,6 +115,42 @@ header h1 {
 .subtitle {
     font-size: 1.2rem;
     color: var(--ctp-subtext0);
+}
+
+.controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.control-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--ctp-surface0);
+    border: 1px solid var(--ctp-surface1);
+    border-radius: 8px;
+    color: var(--ctp-text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.control-button:hover {
+    background: var(--ctp-surface1);
+    border-color: var(--ctp-mauve);
+}
+
+.control-icon {
+    font-size: 1.1rem;
+}
+
+.control-label {
+    font-size: 0.85rem;
 }
 
 /* Last Played Hero Section */

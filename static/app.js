@@ -182,7 +182,9 @@ function initializeChart() {
                 legend: {
                     display: true,
                     labels: {
-                        color: '#cdd6f4'
+                        color: '#cdd6f4',
+                        usePointStyle: true,
+                        pointStyle: 'line'
                     }
                 }
             },
@@ -259,8 +261,11 @@ async function toggleArtistInChart(artistName, period) {
             borderColor: color.border,
             backgroundColor: color.bg,
             borderWidth: 2,
-            tension: 0.4,
-            fill: true
+            tension: 0,
+            cubicInterpolationMode: 'monotone',
+            fill: true,
+            pointRadius: 0,
+            pointHoverRadius: 0
         });
 
         artistChart.update();
@@ -313,10 +318,99 @@ document.getElementById('recently-played-toggle').addEventListener('click', () =
     collapseIcon.classList.toggle('collapsed');
 });
 
-// Auto-refresh every 30 seconds
-setInterval(() => {
-    loadLastPlayed();
-    loadTracks();
-    const selectedPeriod = document.getElementById('period-selector').value;
-    loadTopArtists(selectedPeriod);
-}, 30000);
+// Live mode toggle
+let refreshInterval = null;
+
+function startLiveMode() {
+    if (refreshInterval) return; // Already running
+
+    refreshInterval = setInterval(() => {
+        loadLastPlayed();
+        loadTracks();
+        const selectedPeriod = document.getElementById('period-selector').value;
+        loadTopArtists(selectedPeriod);
+    }, 30000);
+
+    // Update button
+    const button = document.getElementById('live-mode-toggle');
+    button.querySelector('.control-icon').textContent = '🔴';
+    button.querySelector('.control-label').textContent = 'Live';
+
+    localStorage.setItem('liveMode', 'true');
+}
+
+function stopLiveMode() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+        refreshInterval = null;
+    }
+
+    // Update button
+    const button = document.getElementById('live-mode-toggle');
+    button.querySelector('.control-icon').textContent = '⚫';
+    button.querySelector('.control-label').textContent = 'Paused';
+
+    localStorage.setItem('liveMode', 'false');
+}
+
+// Live mode button click handler
+document.getElementById('live-mode-toggle').addEventListener('click', () => {
+    if (refreshInterval) {
+        stopLiveMode();
+    } else {
+        startLiveMode();
+    }
+});
+
+// Theme toggle
+const themes = ['system', 'light', 'dark'];
+let currentThemeIndex = 0;
+
+function applyTheme(theme) {
+    const root = document.documentElement;
+
+    if (theme === 'system') {
+        // Check system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+        root.setAttribute('data-theme', theme);
+    }
+
+    // Update button
+    const button = document.getElementById('theme-toggle');
+    const icons = { system: '💻', light: '☀️', dark: '🌙' };
+    const labels = { system: 'System', light: 'Light', dark: 'Dark' };
+
+    button.querySelector('.control-icon').textContent = icons[theme];
+    button.querySelector('.control-label').textContent = labels[theme];
+
+    localStorage.setItem('theme', theme);
+}
+
+// Theme button click handler
+document.getElementById('theme-toggle').addEventListener('click', () => {
+    currentThemeIndex = (currentThemeIndex + 1) % themes.length;
+    const theme = themes[currentThemeIndex];
+    applyTheme(theme);
+});
+
+// Listen for system theme changes when in system mode
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    const savedTheme = localStorage.getItem('theme') || 'system';
+    if (savedTheme === 'system') {
+        applyTheme('system');
+    }
+});
+
+// Initialize on page load
+const savedLiveMode = localStorage.getItem('liveMode');
+if (savedLiveMode === 'false') {
+    stopLiveMode();
+} else {
+    startLiveMode(); // Default to live mode
+}
+
+const savedTheme = localStorage.getItem('theme') || 'system';
+currentThemeIndex = themes.indexOf(savedTheme);
+applyTheme(savedTheme);
