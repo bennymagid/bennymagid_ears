@@ -1,0 +1,40 @@
+name: Deploy to InMotion
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to server
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ vars.SSH_HOST }}
+        username: ${{ vars.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        source: "app.py,main.cgi,.htaccess,requirements.txt,static,templates"
+        target: "/home/bennymagid/public_html/ears"
+        strip_components: 0
+
+    - name: Fix ownership, permissions, restart
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ vars.SSH_HOST }}
+        username: ${{ vars.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        script: |
+          cd /home/bennymagid/public_html/ears
+          # Ensure files belong to your user & group
+          chown -R bennymagid:bennymagid .
+          # Set permissions
+          chmod +x main.cgi
+          chmod 644 .htaccess
+          # Restart Apache if needed
+          # sudo systemctl restart httpd

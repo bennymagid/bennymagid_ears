@@ -1,17 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Benny's Ears</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👂</text></svg>">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
+
 <body>
     <div class="container">
         <header>
-            <h1>👂 What's in <a href = "https://bennymagid.com">Benny's</a> Ears 👂</h1>
-            <subtitle>Powered by <a href = "https://www.last.fm/api#getting-started">Last.fm API</a> - see my <a href = "https://www.last.fm/user/bmahid">Last.fm</a> or my <a href = "https://open.spotify.com/user/1287562186">Spotify</a> for more</a></subtitle>
+            <h1>👂 What's in <a href="https://bennymagid.com">Benny's</a> Ears 👂</h1>
+            <subtitle>Powered by <a href="https://www.last.fm/api#getting-started">Last.fm API</a> - see my <a
+                    href="https://www.last.fm/user/bmahid">Last.fm</a> or my <a
+                    href="https://open.spotify.com/user/1287562186">Spotify</a> for more</a></subtitle>
         </header>
 
         <section class="last-played-hero" id="last-played">
@@ -19,21 +25,41 @@
         </section>
 
         <section class="top-artists-section">
-            <h2 class="section-title">📊 Top Artists This Week</h2>
+            <div class="section-header">
+                <h2 class="section-title">📊 Top Artists</h2>
+                <select id="period-selector" class="period-selector">
+                    <option value="7day">This Week</option>
+                    <option value="1month">This Month</option>
+                    <option value="3month">Last 3 Months</option>
+                    <option value="6month">Last 6 Months</option>
+                    <option value="12month">This Year</option>
+                    <option value="overall">All Time</option>
+                </select>
+            </div>
             <div id="top-artists" class="top-artists-list">
                 <div class="loading">Loading top artists...</div>
             </div>
         </section>
 
-        <section class="top-artists-section">
-            <h2 class="section-title">🏆 Top Artists of 2025</h2>
-            <div id="top-artists-year" class="top-artists-list">
-                <div class="loading">Loading yearly top artists...</div>
+        <section class="chart-section">
+            <div class="section-header">
+                <h2 class="section-title">📈 Listening History</h2>
+            </div>
+            <div id="chart-loading" class="chart-loading" style="display: none;">
+                Loading artist data...
+            </div>
+            <div class="chart-container">
+                <canvas id="artist-chart"></canvas>
             </div>
         </section>
 
-        <section class="top-artists-section"></section>
-            <h2 class="section-title">⏱️ Recently Played</h2>
+        <section class="top-artists-section">
+            <div class="section-header">
+                <h2 class="section-title collapsicble" id="recently-played-toggle">
+                    ⏱️ Recently Played
+                    <span class="collapse-icon">▼</span>
+                </h2>
+            </div>
             <div id="tracks" class="tracks-grid">
                 <div class="loading">Loading tracks...</div>
             </div>
@@ -46,4 +72,5 @@
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
+
 </html>
