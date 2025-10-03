@@ -173,11 +173,7 @@ function initializeChart() {
         type: 'line',
         data: {
             labels: [],
-            datasets: [
-                {
-                    pointStyle: false
-                }
-            ]
+            datasets: []
         },
         options: {
             responsive: true,
