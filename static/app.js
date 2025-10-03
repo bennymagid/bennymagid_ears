@@ -167,7 +167,24 @@ function getWeeksForPeriod(period) {
     return periodConfig[period] || { weeks: 12, aggregate: 'week' };
 }
 
+function getChartColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+    if (theme === 'light') {
+        return {
+            text: '#4c4f69',    // Catppuccin Latte text
+            grid: '#acb0be'     // Catppuccin Latte surface2
+        };
+    } else {
+        return {
+            text: '#cdd6f4',    // Catppuccin Mocha text
+            grid: '#45475a'     // Catppuccin Mocha surface1
+        };
+    }
+}
+
 function initializeChart() {
+    const colors = getChartColors();
     const ctx = document.getElementById('artist-chart').getContext('2d');
     artistChart = new Chart(ctx, {
         type: 'line',
@@ -182,7 +199,7 @@ function initializeChart() {
                 legend: {
                     display: true,
                     labels: {
-                        color: '#cdd6f4',
+                        color: colors.text,
                         usePointStyle: true,
                         pointStyle: 'line'
                     }
@@ -192,24 +209,42 @@ function initializeChart() {
                 y: {
                     beginAtZero: true,
                     ticks: {
-                        color: '#cdd6f4',
+                        color: colors.text,
                         stepSize: 1
                     },
                     grid: {
-                        color: '#45475a'
+                        color: colors.grid
                     }
                 },
                 x: {
                     ticks: {
-                        color: '#cdd6f4'
+                        color: colors.text
                     },
                     grid: {
-                        color: '#45475a'
+                        color: colors.grid
                     }
                 }
             }
         }
     });
+}
+
+function updateChartColors() {
+    if (!artistChart) return;
+
+    const colors = getChartColors();
+
+    // Update legend color
+    artistChart.options.plugins.legend.labels.color = colors.text;
+
+    // Update axis colors
+    artistChart.options.scales.y.ticks.color = colors.text;
+    artistChart.options.scales.y.grid.color = colors.grid;
+    artistChart.options.scales.x.ticks.color = colors.text;
+    artistChart.options.scales.x.grid.color = colors.grid;
+
+    // Re-render chart
+    artistChart.update();
 }
 
 async function toggleArtistInChart(artistName, period) {
@@ -386,6 +421,9 @@ function applyTheme(theme) {
     button.querySelector('.control-label').textContent = labels[theme];
 
     localStorage.setItem('theme', theme);
+
+    // Update chart colors to match new theme
+    updateChartColors();
 }
 
 // Theme button click handler
