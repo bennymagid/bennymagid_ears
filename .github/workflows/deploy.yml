@@ -3,7 +3,7 @@ name: Deploy to InMotion
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -18,7 +18,7 @@ jobs:
       with:
         host: ${{ vars.SSH_HOST }}
         username: ${{ vars.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "app.py,main.cgi,.htaccess,requirements.txt,static,templates"
         target: "/home/bennymagid/public_html/ears"
         strip_components: 0
@@ -28,13 +28,10 @@ jobs:
       with:
         host: ${{ vars.SSH_HOST }}
         username: ${{ vars.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /home/bennymagid/public_html/ears
-          # Ensure files belong to your user & group
           chown -R bennymagid:bennymagid .
-          # Set permissions
           chmod +x main.cgi
           chmod 644 .htaccess
-          # Restart Apache if needed
           # sudo systemctl restart httpd
