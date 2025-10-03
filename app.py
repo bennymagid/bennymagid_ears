@@ -338,15 +338,86 @@ def weekly_chart_list():
 @app.route('/api/lastfm/artist-history/<artist_name>')
 def artist_history(artist_name):
     from flask import request
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from collections import defaultdict
+    import time
 
     # Get number of weeks to fetch (default 12)
     weeks = int(request.args.get('weeks', '12'))
     aggregate = request.args.get('aggregate', 'week')
 
-    # First, get the weekly chart list
     url = f'https://ws.audioscrobbler.com/2.0/'
+
+    # Handle daily aggregation differently
+    if aggregate == 'day':
+        # Fetch recent tracks and group by day
+        days = weeks  # For 'day' aggregate, weeks parameter represents number of days
+        now = int(time.time())
+        from_timestamp = now - (days * 86400)  # 86400 seconds in a day
+
+        # Fetch recent tracks
+        recent_params = {
+            'method': 'user.getrecenttracks',
+            'user': LASTFM_USERNAME,
+            'api_key': LASTFM_API_KEY,
+            'format': 'json',
+            'from': from_timestamp,
+            'limit': 1000  # Max limit
+        }
+
+        response = requests.get(url, params=recent_params)
+        data = response.json()
+
+        # Group tracks by day and count plays per artist
+        daily_counts = defaultdict(int)
+
+        if 'recenttracks' in data and 'track' in data['recenttracks']:
+            tracks = data['recenttracks']['track']
+            if not isinstance(tracks, list):
+                tracks = [tracks]
+
+            for track in tracks:
+                # Skip if currently playing
+                if '@attr' in track and track['@attr'].get('nowplaying') == 'true':
+                    continue
+
+                # Skip if no date
+                if 'date' not in track:
+                    continue
+
+                # Get artist name
+                track_artist = track['artist']['#text'] if isinstance(track['artist'], dict) else track['artist']
+
+                # Only count if it's the artist we're looking for
+                if track_artist.lower() == artist_name.lower():
+                    timestamp = int(track['date']['uts'])
+                    # Get day (midnight timestamp)
+                    dt = datetime.fromtimestamp(timestamp)
+                    day_start = datetime(dt.year, dt.month, dt.day)
+                    day_timestamp = int(day_start.timestamp())
+
+                    daily_counts[day_timestamp] += 1
+
+        # Create result for last N days (even if no plays)
+        history = []
+        for i in range(days):
+            day_offset = now - (i * 86400)
+            dt = datetime.fromtimestamp(day_offset)
+            day_start = datetime(dt.year, dt.month, dt.day)
+            day_timestamp = int(day_start.timestamp())
+
+            history.append({
+                'week_start': day_timestamp,
+                'week_end': day_timestamp,
+                'playcount': daily_counts.get(day_timestamp, 0)
+            })
+
+        # Reverse to get chronological order
+        history.reverse()
+        return jsonify(history)
+
+    # Original weekly/monthly aggregation logic
+    # First, get the weekly chart list
     chart_params = {
         'method': 'user.getweeklychartlist',
         'user': LASTFM_USERNAME,

@@ -157,7 +157,7 @@ const chartColors = [
 
 function getWeeksForPeriod(period) {
     const periodConfig = {
-        '7day': { weeks: 1, aggregate: 'week' },
+        '7day': { weeks: 7, aggregate: 'day' },
         '1month': { weeks: 4, aggregate: 'week' },
         '3month': { weeks: 12, aggregate: 'week' },
         '6month': { weeks: 24, aggregate: 'month' },
