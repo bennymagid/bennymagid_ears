@@ -1,3 +1,16 @@
+// Hipster score calculation constants
+const HIPSTER_BASE_SCORE = 140;
+const HIPSTER_SCALE_FACTOR = 20;
+
+// Global artist distribution (approximate, based on Last.fm power law)
+const GLOBAL_ARTIST_DISTRIBUTION = {
+    'Mainstream': 2,      // ~2% of artists (>10M listeners)
+    'Popular': 6,         // ~6% (1M-10M listeners)
+    'Indie': 17,          // ~17% (10K-1M listeners)
+    'Underground': 28,    // ~28% (100-10K listeners)
+    'Ultra Hipster': 47   // ~47% (<100 listeners)
+};
+
 function getTimeAgo(timestamp) {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
@@ -9,20 +22,167 @@ function getTimeAgo(timestamp) {
 }
 
 function getHipsterLabel(score) {
-    if (score >= 48) return '🎸 Ultra Hipster';
-    if (score >= 42) return '🎭 Underground';
+    if (score >= 85) return '🎸 Ultra Hipster';
+    if (score >= 60) return '🎭 Underground';
     if (score >= 35) return '🎪 Indie';
-    if (score >= 20) return '📻 Popular';
+    if (score >= 10) return '📻 Popular';
     return '🔥 Mainstream';
+}
+
+function getHipsterCutoffs() {
+    return [
+        { emoji: '🔥', label: 'Mainstream', range: '<10' },
+        { emoji: '📻', label: 'Popular', range: '10-35' },
+        { emoji: '🎪', label: 'Indie', range: '35-60' },
+        { emoji: '🎭', label: 'Underground', range: '60-85' },
+        { emoji: '🎸', label: 'Ultra Hipster', range: '85+' }
+    ];
 }
 
 function getHipsterColor(score) {
     // Catppuccin Mocha colors
-    if (score >= 48) return '#cba6f7'; // mauve
-    if (score >= 42) return '#b4befe'; // lavender
-    if (score >= 35) return '#89dceb'; // sky
-    if (score >= 20) return '#89b4fa'; // blue
+    if (score >= 85) return '#cba6f7'; // mauve
+    if (score >= 60) return '#b4befe'; // lavender
+    if (score >= 35) return '#fab387'; // peach
+    if (score >= 10) return '#89b4fa'; // blue
     return '#a6e3a1'; // green
+}
+
+function scoreToListeners(score) {
+    // Reverse the formula: Score = HIPSTER_BASE_SCORE - (log10(listeners) * HIPSTER_SCALE_FACTOR)
+    // So: listeners = 10^((HIPSTER_BASE_SCORE - Score) / HIPSTER_SCALE_FACTOR)
+    return Math.pow(10, (HIPSTER_BASE_SCORE - score) / HIPSTER_SCALE_FACTOR);
+}
+
+function formatListeners(count) {
+    if (count >= 1e9) return (count / 1e9).toFixed(0) + 'B';
+    if (count >= 1e6) return (count / 1e6).toFixed(0) + 'M';
+    if (count >= 1e3) return (count / 1e3).toFixed(0) + 'K';
+    return Math.round(count).toString();
+}
+
+function parseScoreRange(rangeStr) {
+    // Parse strings like '<20', '20-35', '48+'
+    // Returns { min, max } with null for unbounded
+    if (rangeStr.startsWith('<')) {
+        return { min: null, max: parseInt(rangeStr.substring(1)) };
+    } else if (rangeStr.endsWith('+')) {
+        return { min: parseInt(rangeStr.slice(0, -1)), max: null };
+    } else if (rangeStr.includes('-')) {
+        const [min, max] = rangeStr.split('-').map(s => parseInt(s));
+        return { min, max };
+    }
+    return { min: null, max: null };
+}
+
+function generateHipsterExplanation() {
+    const cutoffs = getHipsterCutoffs();
+
+    const explanation = `
+        <p class="explanation-intro">
+            The Hipster Score measures how obscure an artist is based on their global listener count on Last.fm.
+            The score ranges from 0 to 100, where higher scores indicate more obscure (hipster) artists.
+        </p>
+
+        <div class="explanation-formula">
+            <h3>Formula</h3>
+            <p><code>Score = ${HIPSTER_BASE_SCORE} - (log<sub>10</sub>(listeners) × ${HIPSTER_SCALE_FACTOR})</code></p>
+            <p class="formula-note">
+                This logarithmic scale means that each 10x increase in listeners decreases the score by ${HIPSTER_SCALE_FACTOR} points.
+            </p>
+        </div>
+
+        <div class="explanation-visualization">
+            <h3>Score Visualization</h3>
+            <div class="chart-container-formula">
+                <canvas id="score-formula-chart"></canvas>
+            </div>
+            <p class="chart-note">Category boundaries are marked on the horizontal axis with labeled tick marks.</p>
+        </div>
+
+        <div class="explanation-distribution">
+            <h3>Global Artist Distribution - still a work in progress</h3>
+            <p class="distribution-note">
+                Approximate distribution of artists on Last.fm based on a <a href="https://en.wikipedia.org/wiki/Power_law" target="_blank" rel="noopener noreferrer">power law</a> pattern.
+                In a power law distribution, a small percentage of artists have the vast majority of listeners, while most artists have relatively few listeners. I'm sure there's a proper data source for this, but I don't have it yet.
+                These percentages are estimated based on typical music industry patterns:
+            </p>
+            <div class="distribution-bars">
+                ${Object.entries(GLOBAL_ARTIST_DISTRIBUTION).reverse().map(([category, percentage]) => {
+                    const cutoff = cutoffs.find(c => c.label === category);
+                    const emoji = cutoff ? cutoff.emoji : '';
+                    const color = getHipsterColor(category === 'Ultra Hipster' ? 90 :
+                                                   category === 'Underground' ? 70 :
+                                                   category === 'Indie' ? 45 :
+                                                   category === 'Popular' ? 20 : 5);
+                    return `
+                        <div class="distribution-bar-container">
+                            <div class="distribution-label">
+                                <span class="distribution-emoji">${emoji}</span>
+                                <span class="distribution-category">${category}</span>
+                            </div>
+                            <div class="distribution-bar-wrapper">
+                                <div class="distribution-bar" style="width: ${percentage}%; background-color: ${color};"></div>
+                                <span class="distribution-percentage">${percentage}%</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+
+        <div class="explanation-categories">
+            <h3>Categories</h3>
+            <div class="category-list">
+                ${cutoffs.map(c => {
+                    const scoreRange = parseScoreRange(c.range);
+                    let listenerRange;
+
+                    if (scoreRange.min === null && scoreRange.max !== null) {
+                        // <X format (e.g., <20)
+                        const maxListeners = scoreToListeners(scoreRange.max);
+                        listenerRange = `>${formatListeners(maxListeners)}`;
+                    } else if (scoreRange.max === null && scoreRange.min !== null) {
+                        // X+ format (e.g., 48+)
+                        const minListeners = scoreToListeners(scoreRange.min);
+                        listenerRange = `<${formatListeners(minListeners)}`;
+                    } else if (scoreRange.min !== null && scoreRange.max !== null) {
+                        // X-Y format (e.g., 20-35)
+                        const minListeners = scoreToListeners(scoreRange.max); // Note: reversed because higher score = lower listeners
+                        const maxListeners = scoreToListeners(scoreRange.min);
+                        listenerRange = `${formatListeners(minListeners)} - ${formatListeners(maxListeners)}`;
+                    } else {
+                        listenerRange = 'N/A';
+                    }
+
+                    return `
+                        <div class="category-item">
+                            <span class="category-emoji">${c.emoji}</span>
+                            <div class="category-info">
+                                <span class="category-name">${c.label}</span>
+                                <span class="category-range">Score: ${c.range}</span>
+                                <span class="category-listeners">Listeners: ${listenerRange}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+
+        <div class="explanation-examples">
+            <h3>Example Listener Counts</h3>
+            <ul>
+                ${[100000000, 1000000, 100000, 10000, 1000, 100].map(listeners => {
+                    const rawScore = HIPSTER_BASE_SCORE - (Math.log10(listeners) * HIPSTER_SCALE_FACTOR);
+                    const score = Math.max(0, Math.min(100, rawScore));
+                    const formattedScore = score.toFixed(0);
+                    return `<li><strong>${formatListeners(listeners)} listeners:</strong> Score ~${formattedScore}</li>`;
+                }).join('')}
+            </ul>
+        </div>
+    `;
+
+    document.getElementById('hipster-explanation').innerHTML = explanation;
 }
 
 async function loadLastPlayed() {
@@ -103,8 +263,8 @@ async function loadTopArtists(period = '7day') {
         const artists = await response.json();
 
         const artistsContainer = document.getElementById('top-artists');
-        artistsContainer.innerHTML = artists.map((artist, index) => `
-            <div class="artist-item" data-artist-name="${artist.name}" data-period="${period}">
+        artistsContainer.innerHTML = artists.map((artist, index) => {
+            const content = `
                 <div class="artist-rank">#${index + 1}</div>
                 <div class="artist-details">
                     <h3 class="artist-name">${artist.name}</h3>
@@ -115,17 +275,14 @@ async function loadTopArtists(period = '7day') {
                     ${getHipsterLabel(artist.hipsterScore)}
                     <div class="hipster-score">${artist.hipsterScore}</div>
                 </div>
-            </div>
-        `).join('');
+            `;
 
-        // Add click event listeners to artist items
-        document.querySelectorAll('.artist-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const artistName = item.getAttribute('data-artist-name');
-                const period = item.getAttribute('data-period');
-                toggleArtistInChart(artistName, period);
-            });
-        });
+            if (artist.url) {
+                return `<a href="${artist.url}" target="_blank" rel="noopener noreferrer" class="artist-item">${content}</a>`;
+            } else {
+                return `<div class="artist-item">${content}</div>`;
+            }
+        }).join('');
 
         return artists;
     } catch (error) {
@@ -139,7 +296,11 @@ async function loadTopArtists(period = '7day') {
 let artistChart = null;
 let chartArtists = []; // Track which artists are currently in the chart
 let chartLabels = null;
-let currentPeriod = '7day';
+let currentPeriod = '1month';
+
+let genreChart = null;
+let genreBarChart = null;
+let hipsterDonutChart = null;
 
 // Catppuccin color palette for chart lines
 const chartColors = [
@@ -194,7 +355,7 @@ function initializeChart() {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     display: true,
@@ -210,7 +371,7 @@ function initializeChart() {
                     beginAtZero: true,
                     ticks: {
                         color: colors.text,
-                        stepSize: 1
+                        maxTicksLimit: 10
                     },
                     grid: {
                         color: colors.grid
@@ -230,21 +391,57 @@ function initializeChart() {
 }
 
 function updateChartColors() {
-    if (!artistChart) return;
-
     const colors = getChartColors();
 
-    // Update legend color
-    artistChart.options.plugins.legend.labels.color = colors.text;
+    // Update artist chart colors (if it exists)
+    if (artistChart) {
+        artistChart.options.plugins.legend.labels.color = colors.text;
+        artistChart.options.scales.y.ticks.color = colors.text;
+        artistChart.options.scales.y.grid.color = colors.grid;
+        artistChart.options.scales.x.ticks.color = colors.text;
+        artistChart.options.scales.x.grid.color = colors.grid;
+        artistChart.update();
+    }
 
-    // Update axis colors
-    artistChart.options.scales.y.ticks.color = colors.text;
-    artistChart.options.scales.y.grid.color = colors.grid;
-    artistChart.options.scales.x.ticks.color = colors.text;
-    artistChart.options.scales.x.grid.color = colors.grid;
+    // Update genre chart colors
+    if (genreChart) {
+        genreChart.options.plugins.legend.labels.color = colors.text;
+        genreChart.options.scales.r.ticks.color = colors.text;
+        genreChart.options.scales.r.grid.color = colors.grid;
+        genreChart.options.scales.r.pointLabels.color = colors.text;
+        genreChart.update();
+    }
 
-    // Re-render chart
-    artistChart.update();
+    // Update genre bar chart colors
+    if (genreBarChart) {
+        genreBarChart.options.plugins.legend.labels.color = colors.text;
+        genreBarChart.options.scales.y.ticks.color = colors.text;
+        genreBarChart.options.scales.y.grid.color = colors.grid;
+        genreBarChart.options.scales.x.title.color = colors.text;
+        genreBarChart.options.scales.x.ticks.color = colors.text;
+        genreBarChart.options.scales.x.grid.color = colors.grid;
+        genreBarChart.update();
+    }
+
+    // Update hipster donut chart colors
+    if (hipsterDonutChart) {
+        hipsterDonutChart.options.plugins.legend.labels.color = colors.text;
+        hipsterDonutChart.update();
+    }
+
+    // Update score formula chart colors
+    if (scoreFormulaChart) {
+        // Update main curve color
+        scoreFormulaChart.data.datasets[0].borderColor = colors.text;
+
+        scoreFormulaChart.options.scales.x.title.color = colors.text;
+        scoreFormulaChart.options.scales.x.ticks.color = colors.text;
+        scoreFormulaChart.options.scales.x.grid.color = colors.grid;
+        scoreFormulaChart.options.scales.y.title.color = colors.text;
+        scoreFormulaChart.options.scales.y.ticks.color = colors.text;
+        scoreFormulaChart.options.scales.y.grid.color = colors.grid;
+        scoreFormulaChart.update();
+    }
 }
 
 async function toggleArtistInChart(artistName, period) {
@@ -299,8 +496,8 @@ async function toggleArtistInChart(artistName, period) {
             tension: 0,
             cubicInterpolationMode: 'monotone',
             fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 0
+            pointRadius: 3,
+            pointHoverRadius: 5
         });
 
         artistChart.update();
@@ -313,35 +510,472 @@ async function toggleArtistInChart(artistName, period) {
 }
 
 
+function initializeGenreChart() {
+    const colors = getChartColors();
+    const ctx = document.getElementById('genre-chart').getContext('2d');
+    genreChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: {
+                        color: colors.text,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.r + '%';
+                        }
+                    }
+                }
+            },
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    ticks: {
+                        display: false,
+                        backdropColor: 'transparent',
+                        maxTicksLimit: 5
+                    },
+                    grid: {
+                        color: colors.grid
+                    },
+                    pointLabels: {
+                        color: colors.text,
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadGenreProfile() {
+    // Hardcoded periods: This Month, Last 3 Months, This Year
+    const periods = ['1month', '3month', '12month'];
+
+    const loadingElement = document.getElementById('genre-loading');
+
+    try {
+        loadingElement.style.display = 'block';
+
+        const response = await fetch(`api/lastfm/genre-profile?periods=${periods.join(',')}`);
+        const data = await response.json();
+
+        // Collect all unique genres across all periods
+        const allGenres = new Set();
+        Object.values(data).forEach(periodData => {
+            Object.keys(periodData).forEach(genre => allGenres.add(genre));
+        });
+
+        genreChart.data.labels = Array.from(allGenres);
+
+        // Create datasets for each period
+        const periodLabels = {
+            '1month': 'This Month',
+            '3month': 'Last 3 Months',
+            '12month': 'This Year'
+        };
+
+        genreChart.data.datasets = periods.map((period, index) => {
+            const periodData = data[period] || {};
+            const values = genreChart.data.labels.map(genre => periodData[genre] || 0);
+
+            const color = chartColors[index % chartColors.length];
+
+            return {
+                label: periodLabels[period] || period,
+                data: values,
+                borderColor: color.border,
+                backgroundColor: color.bg,
+                borderWidth: 2,
+                pointBackgroundColor: color.border,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1,
+                pointRadius: 2,
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: color.border,
+                pointHoverRadius: 4
+            };
+        });
+
+        genreChart.update();
+    } catch (error) {
+        console.error('Error loading genre profile:', error);
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+}
+
+function initializeGenreBarChart() {
+    const colors = getChartColors();
+    const ctx = document.getElementById('genre-bar-chart').getContext('2d');
+    genreBarChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Plays',
+                data: [],
+                backgroundColor: chartColors.map(c => c.border),
+                borderColor: chartColors.map(c => c.border),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    ticks: {
+                        color: colors.text
+                    },
+                    grid: {
+                        color: colors.grid
+                    }
+                },
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Plays',
+                        color: colors.text
+                    },
+                    ticks: {
+                        color: colors.text
+                    },
+                    grid: {
+                        color: colors.grid
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadTopGenresBar(period = '1month') {
+    const loadingElement = document.getElementById('genre-bar-loading');
+
+    try {
+        loadingElement.style.display = 'block';
+
+        const response = await fetch(`api/lastfm/top-genres?period=${period}`);
+        const data = await response.json();
+
+        genreBarChart.data.labels = data.map(item => item.genre);
+        genreBarChart.data.datasets[0].data = data.map(item => item.count);
+
+        // Assign colors
+        genreBarChart.data.datasets[0].backgroundColor = data.map((_, i) => chartColors[i % chartColors.length].border);
+        genreBarChart.data.datasets[0].borderColor = data.map((_, i) => chartColors[i % chartColors.length].border);
+
+        genreBarChart.update();
+    } catch (error) {
+        console.error('Error loading top genres:', error);
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+}
+
+function initializeHipsterDonut() {
+    const colors = getChartColors();
+    const ctx = document.getElementById('hipster-donut').getContext('2d');
+
+    // Hipster category colors (matching getHipsterColor function)
+    const hipsterColors = {
+        'Ultra Hipster': '#cba6f7',   // mauve
+        'Underground': '#b4befe',      // lavender
+        'Indie': '#fab387',            // peach
+        'Popular': '#89b4fa',          // blue
+        'Mainstream': '#a6e3a1'        // green
+    };
+
+    hipsterDonutChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: {
+                        color: colors.text,
+                        padding: 10,
+                        font: {
+                            size: 11
+                        },
+                        usePointStyle: true,
+                        pointStyle: 'circle'
+                    }
+                }
+            }
+        }
+    });
+}
+
+let scoreFormulaChart = null;
+
+function initializeScoreFormulaChart() {
+    const colors = getChartColors();
+    const ctx = document.getElementById('score-formula-chart').getContext('2d');
+
+    // Generate data points for the formula curve
+    const scores = [];
+    const listenerCounts = [];
+    const pointRadii = [];
+    const pointHoverRadii = [];
+
+    // Generate points from 0 to 100 score, calculate corresponding listeners
+    for (let score = 0; score <= 100; score += 0.5) {
+        const listeners = scoreToListeners(score);
+        scores.push(score);
+        listenerCounts.push(listeners);
+
+        // Only show points at cutoff values
+        const isCutoff = [0, 10, 35, 60, 85, 100].includes(score);
+        pointRadii.push(isCutoff ? 4 : 0);
+        pointHoverRadii.push(isCutoff ? 6 : 0);
+    }
+
+    scoreFormulaChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Listeners',
+                    data: scores.map((score, i) => ({
+                        x: score,
+                        y: listenerCounts[i]
+                    })),
+                    borderColor: colors.text,
+                    borderWidth: 3,
+                    pointRadius: pointRadii,
+                    pointHoverRadius: pointHoverRadii,
+                    fill: false,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    enabled: true,
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return `Listeners: ${formatListeners(context.parsed.y)}`;
+                            }
+                            return '';
+                        },
+                        title: function(context) {
+                            if (context[0].datasetIndex === 0) {
+                                return `Score: ${context[0].parsed.x.toFixed(0)}`;
+                            }
+                            return '';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 0,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Hipster Score',
+                        color: colors.text
+                    },
+                    ticks: {
+                        color: colors.text,
+                        callback: function(value) {
+                            if (value === 0) return 'Mainstream (0)';
+                            if (value === 10) return 'Popular (10)';
+                            if (value === 35) return 'Indie (35)';
+                            if (value === 60) return 'Underground (60)';
+                            if (value === 85) return 'Ultra Hipster (85)';
+                            if (value === 100) return '100';
+                            return '';
+                        },
+                        autoSkip: false,
+                        stepSize: null,
+                        includeBounds: true
+                    },
+                    afterBuildTicks: function(axis) {
+                        axis.ticks = [
+                            { value: 0 },
+                            { value: 10 },
+                            { value: 35 },
+                            { value: 60 },
+                            { value: 85 },
+                            { value: 100 }
+                        ];
+                        return axis.ticks;
+                    },
+                    grid: {
+                        color: colors.grid
+                    }
+                },
+                y: {
+                    type: 'logarithmic',
+                    min: 100,
+                    max: 10000000,
+                    title: {
+                        display: true,
+                        text: 'Listeners (log scale)',
+                        color: colors.text
+                    },
+                    ticks: {
+                        color: colors.text,
+                        callback: function(value) {
+                            return formatListeners(value);
+                        },
+                        autoSkip: false
+                    },
+                    afterBuildTicks: function(axis) {
+                        axis.ticks = [
+                            { value: 100 },
+                            { value: 1000 },
+                            { value: 10000 },
+                            { value: 100000 },
+                            { value: 1000000 },
+                            { value: 10000000 }
+                        ];
+                    },
+                    grid: {
+                        color: colors.grid
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function loadMusicStats(period = '1month') {
+    const loadingElement = document.getElementById('stats-loading');
+
+    try {
+        loadingElement.style.display = 'block';
+
+        const response = await fetch(`api/lastfm/music-stats?period=${period}`);
+        const data = await response.json();
+
+        // Update average hipster score
+        const avgScore = data.avgHipsterScore;
+        document.getElementById('avg-hipster-score').textContent = avgScore;
+
+        // Set color based on score
+        const scoreElement = document.getElementById('avg-hipster-score');
+        if (avgScore >= 85) {
+            scoreElement.style.color = '#cba6f7'; // mauve
+            document.getElementById('hipster-label').textContent = '🎸 Ultra Hipster';
+        } else if (avgScore >= 60) {
+            scoreElement.style.color = '#b4befe'; // lavender
+            document.getElementById('hipster-label').textContent = '🎭 Underground';
+        } else if (avgScore >= 35) {
+            scoreElement.style.color = '#fab387'; // peach
+            document.getElementById('hipster-label').textContent = '🎪 Indie';
+        } else if (avgScore >= 10) {
+            scoreElement.style.color = '#89b4fa'; // blue
+            document.getElementById('hipster-label').textContent = '📻 Popular';
+        } else {
+            scoreElement.style.color = '#a6e3a1'; // green
+            document.getElementById('hipster-label').textContent = '🔥 Mainstream';
+        }
+
+        // Populate dynamic cutoffs
+        const cutoffs = getHipsterCutoffs();
+        const cutoffsHTML = cutoffs.map(c => `${c.emoji} ${c.range}`).join(' • ');
+        document.getElementById('hipster-cutoffs').innerHTML = cutoffsHTML;
+
+        // Update hipster distribution donut
+        const distribution = data.hipsterDistribution;
+        const labels = Object.keys(distribution).filter(key => distribution[key] > 0);
+        const values = labels.map(label => distribution[label]);
+        const colors = labels.map(label => {
+            const colorMap = {
+                'Ultra Hipster': '#cba6f7',
+                'Underground': '#b4befe',
+                'Indie': '#fab387',
+                'Popular': '#89b4fa',
+                'Mainstream': '#a6e3a1'
+            };
+            return colorMap[label];
+        });
+
+        hipsterDonutChart.data.labels = labels;
+        hipsterDonutChart.data.datasets[0].data = values;
+        hipsterDonutChart.data.datasets[0].backgroundColor = colors;
+        hipsterDonutChart.update();
+
+        // Update artist diversity
+        document.getElementById('diversity-percentage').textContent =
+            data.artistDiversity.topArtistPercentage + '%';
+        document.getElementById('top-artist-name').textContent =
+            data.artistDiversity.topArtistName;
+
+    } catch (error) {
+        console.error('Error loading music stats:', error);
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+}
+
 // Load data on page load
 (async () => {
     loadLastPlayed();
     loadTracks();
-    const artists = await loadTopArtists();
+    loadTopArtists('1month');
     initializeChart();
+    initializeGenreChart();
+    initializeGenreBarChart();
+    initializeHipsterDonut();
+    loadGenreProfile();
+    loadTopGenresBar('1month');
+    loadMusicStats('1month');
+    generateHipsterExplanation();
 
-    // Auto-load first artist
-    if (artists.length > 0) {
-        toggleArtistInChart(artists[0].name, '7day');
-    }
+    // Initialize formula chart after explanation is rendered
+    setTimeout(() => {
+        initializeScoreFormulaChart();
+    }, 100);
 })();
 
 // Add event listener for period selector
-document.getElementById('period-selector').addEventListener('change', async (e) => {
+document.getElementById('period-selector').addEventListener('change', (e) => {
     currentPeriod = e.target.value;
-    const artists = await loadTopArtists(e.target.value);
-
-    // Clear chart when period changes
-    chartArtists = [];
-    artistChart.data.datasets = [];
-    artistChart.data.labels = [];
-    chartLabels = null;
-    artistChart.update();
-
-    // Auto-load first artist for new period
-    if (artists.length > 0) {
-        toggleArtistInChart(artists[0].name, e.target.value);
-    }
+    loadTopArtists(e.target.value);
 });
 
 // Add event listener for collapsible section
@@ -351,6 +985,18 @@ document.getElementById('recently-played-toggle').addEventListener('click', () =
 
     tracksGrid.classList.toggle('collapsed');
     collapseIcon.classList.toggle('collapsed');
+});
+
+// Genre chart loads automatically on page load, no manual trigger needed
+
+// Add event listener for genre period selector
+document.getElementById('genre-period-selector').addEventListener('change', async (e) => {
+    loadTopGenresBar(e.target.value);
+});
+
+// Add event listener for stats period selector
+document.getElementById('stats-period-selector').addEventListener('change', async (e) => {
+    loadMusicStats(e.target.value);
 });
 
 // Live mode toggle
@@ -438,6 +1084,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
     const savedTheme = localStorage.getItem('theme') || 'system';
     if (savedTheme === 'system') {
         applyTheme('system');
+        updateChartColors();
     }
 });
 

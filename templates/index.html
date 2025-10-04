@@ -36,10 +36,10 @@
 
         <section class="top-artists-section">
             <div class="section-header">
-                <h2 class="section-title">📊 Top Artists</h2>
+                <h2 class="section-title">🔝 Top Artists</h2>
                 <select id="period-selector" class="period-selector">
                     <option value="7day">This Week</option>
-                    <option value="1month">This Month</option>
+                    <option value="1month" selected>This Month</option>
                     <option value="3month">Last 3 Months</option>
                     <option value="6month">Last 6 Months</option>
                     <option value="12month">This Year</option>
@@ -56,10 +56,76 @@
                 <h2 class="section-title">📈 Listening History</h2>
             </div>
             <div id="chart-loading" class="chart-loading" style="display: none;">
-                Loading artist data...
+                Loading chart...
             </div>
             <div class="chart-container">
                 <canvas id="artist-chart"></canvas>
+            </div>
+        </section>
+
+        <section class="chart-section">
+            <div class="genre-charts-grid">
+                <div class="genre-chart-column">
+                    <div class="section-header">
+                        <h2 class="section-title">🎵 Genre Evolution</h2>
+                    </div>
+                    <div id="genre-loading" class="chart-loading" style="display: none;">
+                        Loading genre data...
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="genre-chart"></canvas>
+                    </div>
+                </div>
+                <div class="genre-chart-column">
+                    <div class="section-header">
+                        <h2 class="section-title">🏅 Top Genres</h2>
+                        <select id="genre-period-selector" class="period-selector">
+                            <option value="1month" selected>This Month</option>
+                            <option value="3month">Last 3 Months</option>
+                            <option value="12month">This Year</option>
+                        </select>
+                    </div>
+                    <div id="genre-bar-loading" class="chart-loading" style="display: none;">
+                        Loading genre data...
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="genre-bar-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="music-stats-section">
+            <div class="section-header">
+                <h2 class="section-title">📊 Music Stats</h2>
+                <select id="stats-period-selector" class="period-selector">
+                    <option value="1month" selected>This Month</option>
+                    <option value="3month">Last 3 Months</option>
+                    <option value="12month">This Year</option>
+                </select>
+            </div>
+            <div id="stats-loading" class="chart-loading" style="display: none;">
+                Loading stats...
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3 class="stat-title">Average Hipster Score</h3>
+                    <div id="avg-hipster-score" class="big-stat">--</div>
+                    <div id="hipster-label" class="stat-label">Loading...</div>
+                    <div id="hipster-cutoffs" class="score-cutoffs"></div>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-title">Hipster Distribution</h3>
+                    <div class="chart-container-small">
+                        <canvas id="hipster-donut"></canvas>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-title">Artist Diversity</h3>
+                    <div id="diversity-percentage" class="big-stat">--</div>
+                    <div id="diversity-label" class="stat-label">of plays from top artist</div>
+                    <div id="top-artist-name" class="stat-sublabel">--</div>
+                </div>
             </div>
         </section>
 
@@ -73,6 +139,11 @@
             <div id="tracks" class="tracks-grid">
                 <div class="loading">Loading tracks...</div>
             </div>
+        </section>
+
+        <section class="explanation-section">
+            <h2 class="section-title">🎯 About Hipster Score</h2>
+            <div id="hipster-explanation" class="explanation-content"></div>
         </section>
 
         <footer class="footer">

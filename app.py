@@ -1,6 +1,7 @@
 # app.py
 from flask import Flask, jsonify, render_template
 from flask_cors import CORS
+from flask_caching import Cache
 from dotenv import load_dotenv
 import requests
 import os
@@ -10,6 +11,15 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)  # Allow your static site to call this API
+
+# Configure caching
+cache_config = {
+    'CACHE_TYPE': 'FileSystemCache',
+    'CACHE_DIR': '/tmp/last_fm_cache',
+    'CACHE_DEFAULT_TIMEOUT': 300  # 5 minutes default
+}
+app.config.from_mapping(cache_config)
+cache = Cache(app)
 
 LASTFM_API_KEY = os.getenv('LASTFM_API_KEY')
 LASTFM_USERNAME = os.getenv('LASTFM_USERNAME')
@@ -26,10 +36,13 @@ def calculate_hipster_score(listeners):
     if listeners == 0:
         return 100
 
-    # Use log scale: 100M listeners = ~0, 1K listeners = ~100
-    # Formula: 100 - (log10(listeners) * 12.5)
-    # Adjusted so: 100M = 0, 10M = 12.5, 1M = 25, 100K = 37.5, 10K = 50, 1K = 62.5, 100 = 75, 10 = 87.5
-    score = 100 - (math.log10(listeners) * 12.5)
+    # Constants for hipster score calculation
+    HIPSTER_BASE_SCORE = 140
+    HIPSTER_SCALE_FACTOR = 20
+
+    # Formula: HIPSTER_BASE_SCORE - (log10(listeners) * HIPSTER_SCALE_FACTOR)
+    # This maps 10M+ listeners to 0 and 100 listeners to 100
+    score = HIPSTER_BASE_SCORE - (math.log10(listeners) * HIPSTER_SCALE_FACTOR)
     return max(0, min(100, int(score)))  # Clamp between 0-100
 
 @app.route('/')
@@ -37,6 +50,7 @@ def index():
     return render_template('index.html')
 
 @app.route('/api/lastfm/last-played')
+@cache.cached(timeout=30)
 def last_played():
     url = f'https://ws.audioscrobbler.com/2.0/'
     params = {
@@ -47,7 +61,7 @@ def last_played():
         'limit': 1
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=10)
     data = response.json()
 
     track = data['recenttracks']['track'][0]
@@ -63,7 +77,7 @@ def last_played():
         'api_key': LASTFM_API_KEY,
         'format': 'json'
     }
-    track_info_response = requests.get(url, params=track_info_params)
+    track_info_response = requests.get(url, params=track_info_params, timeout=10)
     track_info = track_info_response.json()
 
     # Extract top tag as genre
@@ -89,7 +103,7 @@ def last_played():
             'api_key': LASTFM_API_KEY,
             'format': 'json'
         }
-        artist_info_response = requests.get(url, params=artist_info_params)
+        artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
         artist_info = artist_info_response.json()
 
         if 'artist' in artist_info and 'stats' in artist_info['artist']:
@@ -115,6 +129,7 @@ def last_played():
     return jsonify(result)
 
 @app.route('/api/lastfm/recent-tracks')
+@cache.cached(timeout=30)
 def recent_tracks():
     url = f'https://ws.audioscrobbler.com/2.0/'
     params = {
@@ -125,7 +140,7 @@ def recent_tracks():
         'limit': RECENT_TRACKS_LIMIT + 1  # Get one extra to skip the first one
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=10)
     data = response.json()
 
     # Process/simplify the data, skip first track (it's in hero section)
@@ -152,7 +167,7 @@ def recent_tracks():
                     'api_key': LASTFM_API_KEY,
                     'format': 'json'
                 }
-                track_info_response = requests.get(url, params=track_info_params)
+                track_info_response = requests.get(url, params=track_info_params, timeout=10)
                 track_info = track_info_response.json()
 
                 # Extract top tag as genre
@@ -182,7 +197,7 @@ def recent_tracks():
                 'api_key': LASTFM_API_KEY,
                 'format': 'json'
             }
-            artist_info_response = requests.get(url, params=artist_info_params)
+            artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
             artist_info = artist_info_response.json()
 
             if 'artist' in artist_info and 'stats' in artist_info['artist']:
@@ -207,6 +222,7 @@ def recent_tracks():
     return jsonify(tracks)
 
 @app.route('/api/lastfm/top-artists')
+@cache.cached(timeout=300, query_string=True)
 def top_artists():
     # Get period from query parameter, default to 7day
     from flask import request
@@ -227,7 +243,7 @@ def top_artists():
         'limit': TOP_ARTISTS_WEEK_LIMIT
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=10)
     data = response.json()
 
     # Process/simplify the data and fetch artist info for hipster score
@@ -240,7 +256,7 @@ def top_artists():
             'api_key': LASTFM_API_KEY,
             'format': 'json'
         }
-        artist_info_response = requests.get(url, params=artist_info_params)
+        artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
         artist_info = artist_info_response.json()
 
         listeners = int(artist_info['artist']['stats']['listeners'])
@@ -266,6 +282,7 @@ def top_artists():
     return jsonify(artists)
 
 @app.route('/api/lastfm/top-artists-year')
+@cache.cached(timeout=3600)
 def top_artists_year():
     url = f'https://ws.audioscrobbler.com/2.0/'
     params = {
@@ -277,7 +294,7 @@ def top_artists_year():
         'limit': TOP_ARTISTS_YEAR_LIMIT
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=10)
     data = response.json()
 
     # Process/simplify the data and fetch artist info for hipster score
@@ -290,7 +307,7 @@ def top_artists_year():
             'api_key': LASTFM_API_KEY,
             'format': 'json'
         }
-        artist_info_response = requests.get(url, params=artist_info_params)
+        artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
         artist_info = artist_info_response.json()
 
         listeners = int(artist_info['artist']['stats']['listeners'])
@@ -316,6 +333,7 @@ def top_artists_year():
     return jsonify(artists)
 
 @app.route('/api/lastfm/weekly-chart-list')
+@cache.cached(timeout=3600)
 def weekly_chart_list():
     url = f'https://ws.audioscrobbler.com/2.0/'
     params = {
@@ -325,7 +343,7 @@ def weekly_chart_list():
         'format': 'json'
     }
 
-    response = requests.get(url, params=params)
+    response = requests.get(url, params=params, timeout=10)
     data = response.json()
 
     # Return the chart list
@@ -335,7 +353,218 @@ def weekly_chart_list():
 
     return jsonify([])
 
+@app.route('/api/lastfm/genre-profile')
+@cache.cached(timeout=300, query_string=True)
+def genre_profile():
+    from flask import request
+    from collections import Counter
+
+    # Get periods from query parameter (comma-separated)
+    periods_param = request.args.get('periods', '1month,3month')
+    periods = [p.strip() for p in periods_param.split(',')]
+
+    url = f'https://ws.audioscrobbler.com/2.0/'
+
+    # First pass: collect all genres across all periods to find top 8 overall
+    all_genres = Counter()
+    period_data = {}
+
+    for period in periods:
+        # Fetch top artists for this period
+        params = {
+            'method': 'user.gettopartists',
+            'user': LASTFM_USERNAME,
+            'api_key': LASTFM_API_KEY,
+            'format': 'json',
+            'period': period,
+            'limit': TOP_ARTISTS_WEEK_LIMIT
+        }
+        response = requests.get(url, params=params, timeout=10)
+        data = response.json()
+
+        # Collect all genres with playcount weighting
+        genre_counts = Counter()
+
+        for artist in data['topartists']['artist']:
+            # Fetch artist info to get genre
+            artist_info_params = {
+                'method': 'artist.getinfo',
+                'artist': artist['name'],
+                'api_key': LASTFM_API_KEY,
+                'format': 'json'
+            }
+            artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
+            artist_info = artist_info_response.json()
+
+            # Extract top tag as genre
+            genre = ''
+            if 'artist' in artist_info and 'tags' in artist_info['artist'] and 'tag' in artist_info['artist']['tags']:
+                tags = artist_info['artist']['tags']['tag']
+                if isinstance(tags, list) and len(tags) > 0:
+                    genre = tags[0]['name'].lower()
+                    # Weight by playcount
+                    playcount = int(artist['playcount'])
+                    genre_counts[genre] += playcount
+                    all_genres[genre] += playcount
+
+        period_data[period] = genre_counts
+
+    # Get top 8 genres overall
+    top_8_genres = [genre for genre, _ in all_genres.most_common(8)]
+
+    # Second pass: convert to percentages for each period
+    result = {}
+    for period in periods:
+        # Calculate total plays for this period
+        total_plays = sum(period_data[period].values())
+
+        # Convert each genre to percentage of total
+        if total_plays > 0:
+            result[period] = {
+                genre: round((period_data[period].get(genre, 0) / total_plays) * 100, 1)
+                for genre in top_8_genres
+            }
+        else:
+            result[period] = {genre: 0 for genre in top_8_genres}
+
+    return jsonify(result)
+
+@app.route('/api/lastfm/top-genres')
+@cache.cached(timeout=300, query_string=True)
+def top_genres():
+    from flask import request
+    from collections import Counter
+
+    # Get period from query parameter
+    period = request.args.get('period', '1month')
+
+    url = f'https://ws.audioscrobbler.com/2.0/'
+
+    # Fetch top artists for this period
+    params = {
+        'method': 'user.gettopartists',
+        'user': LASTFM_USERNAME,
+        'api_key': LASTFM_API_KEY,
+        'format': 'json',
+        'period': period,
+        'limit': TOP_ARTISTS_WEEK_LIMIT
+    }
+    response = requests.get(url, params=params, timeout=10)
+    data = response.json()
+
+    # Collect all genres with playcount weighting
+    genre_counts = Counter()
+
+    for artist in data['topartists']['artist']:
+        # Fetch artist info to get genre
+        artist_info_params = {
+            'method': 'artist.getinfo',
+            'artist': artist['name'],
+            'api_key': LASTFM_API_KEY,
+            'format': 'json'
+        }
+        artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
+        artist_info = artist_info_response.json()
+
+        # Extract top tag as genre
+        if 'artist' in artist_info and 'tags' in artist_info['artist'] and 'tag' in artist_info['artist']['tags']:
+            tags = artist_info['artist']['tags']['tag']
+            if isinstance(tags, list) and len(tags) > 0:
+                genre = tags[0]['name'].lower()
+                # Weight by playcount
+                genre_counts[genre] += int(artist['playcount'])
+
+    # Get top 10 genres with raw counts
+    top_10 = [{'genre': genre, 'count': count} for genre, count in genre_counts.most_common(10)]
+
+    return jsonify(top_10)
+
+@app.route('/api/lastfm/music-stats')
+@cache.cached(timeout=300, query_string=True)
+def music_stats():
+    from flask import request
+
+    # Get period from query parameter
+    period = request.args.get('period', '1month')
+
+    url = f'https://ws.audioscrobbler.com/2.0/'
+
+    # Fetch top artists for this period (uses cache!)
+    params = {
+        'method': 'user.gettopartists',
+        'user': LASTFM_USERNAME,
+        'api_key': LASTFM_API_KEY,
+        'format': 'json',
+        'period': period,
+        'limit': TOP_ARTISTS_WEEK_LIMIT
+    }
+    response = requests.get(url, params=params, timeout=10)
+    data = response.json()
+
+    hipster_scores = []
+    hipster_categories = {
+        'Ultra Hipster': 0,
+        'Underground': 0,
+        'Indie': 0,
+        'Popular': 0,
+        'Mainstream': 0
+    }
+    total_plays = 0
+    top_artist_plays = 0
+    top_artist_name = ''
+
+    for i, artist in enumerate(data['topartists']['artist']):
+        # Fetch artist info to get listener count
+        artist_info_params = {
+            'method': 'artist.getinfo',
+            'artist': artist['name'],
+            'api_key': LASTFM_API_KEY,
+            'format': 'json'
+        }
+        artist_info_response = requests.get(url, params=artist_info_params, timeout=10)
+        artist_info = artist_info_response.json()
+
+        listeners = int(artist_info['artist']['stats']['listeners'])
+        hipster_score = calculate_hipster_score(listeners)
+        hipster_scores.append(hipster_score)
+
+        # Categorize
+        if hipster_score >= 85:
+            hipster_categories['Ultra Hipster'] += 1
+        elif hipster_score >= 60:
+            hipster_categories['Underground'] += 1
+        elif hipster_score >= 35:
+            hipster_categories['Indie'] += 1
+        elif hipster_score >= 10:
+            hipster_categories['Popular'] += 1
+        else:
+            hipster_categories['Mainstream'] += 1
+
+        # Track plays
+        playcount = int(artist['playcount'])
+        total_plays += playcount
+
+        if i == 0:
+            top_artist_plays = playcount
+            top_artist_name = artist['name']
+
+    # Calculate stats
+    avg_hipster_score = round(sum(hipster_scores) / len(hipster_scores), 1) if hipster_scores else 0
+    top_artist_percentage = round((top_artist_plays / total_plays) * 100, 1) if total_plays > 0 else 0
+
+    result = {
+        'avgHipsterScore': avg_hipster_score,
+        'hipsterDistribution': hipster_categories,
+        'artistDiversity': {
+            'topArtistPercentage': top_artist_percentage,
+            'topArtistName': top_artist_name
+        }
+    }
+
+    return jsonify(result)
+
 @app.route('/api/lastfm/artist-history/<artist_name>')
+@cache.cached(timeout=3600, query_string=True)
 def artist_history(artist_name):
     from flask import request
     from datetime import datetime, timedelta
@@ -365,7 +594,7 @@ def artist_history(artist_name):
             'limit': 1000  # Max limit
         }
 
-        response = requests.get(url, params=recent_params)
+        response = requests.get(url, params=recent_params, timeout=10)
         data = response.json()
 
         # Group tracks by day and count plays per artist
@@ -425,7 +654,7 @@ def artist_history(artist_name):
         'format': 'json'
     }
 
-    chart_response = requests.get(url, params=chart_params)
+    chart_response = requests.get(url, params=chart_params, timeout=10)
     chart_data = chart_response.json()
 
     if 'weeklychartlist' not in chart_data or 'chart' not in chart_data['weeklychartlist']:
@@ -448,7 +677,7 @@ def artist_history(artist_name):
             'to': chart['to']
         }
 
-        artist_response = requests.get(url, params=artist_params)
+        artist_response = requests.get(url, params=artist_params, timeout=10)
         artist_data = artist_response.json()
 
         # Find the specific artist in this week's chart
@@ -464,6 +693,50 @@ def artist_history(artist_name):
             'week_end': chart['to'],
             'playcount': playcount
         })
+
+    # Add current incomplete week/month if not included
+    if len(history) > 0:
+        last_week_end = int(history[-1]['week_end'])
+        now = int(time.time())
+
+        # If there's a gap, fetch plays from the end of last week to now
+        if now > last_week_end:
+            recent_params = {
+                'method': 'user.getrecenttracks',
+                'user': LASTFM_USERNAME,
+                'api_key': LASTFM_API_KEY,
+                'format': 'json',
+                'from': last_week_end,
+                'to': now,
+                'limit': 1000
+            }
+
+            recent_response = requests.get(url, params=recent_params, timeout=10)
+            recent_data = recent_response.json()
+
+            # Count plays for this artist in the current period
+            current_playcount = 0
+            if 'recenttracks' in recent_data and 'track' in recent_data['recenttracks']:
+                tracks = recent_data['recenttracks']['track']
+                if not isinstance(tracks, list):
+                    tracks = [tracks]
+
+                for track in tracks:
+                    if '@attr' in track and track['@attr'].get('nowplaying') == 'true':
+                        continue
+                    if 'date' not in track:
+                        continue
+
+                    track_artist = track['artist']['#text'] if isinstance(track['artist'], dict) else track['artist']
+                    if track_artist.lower() == artist_name.lower():
+                        current_playcount += 1
+
+            # Append current period
+            history.append({
+                'week_start': str(last_week_end),
+                'week_end': str(now),
+                'playcount': current_playcount
+            })
 
     # Aggregate by month if requested
     if aggregate == 'month':
