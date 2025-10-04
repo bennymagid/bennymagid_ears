@@ -118,10 +118,11 @@ function generateHipsterExplanation() {
         </div>
 
         <div class="explanation-distribution">
-            <h3>Global Artist Distribution - still a work in progress</h3>
+            <h3>Global Artist Distribution - ⚠️ still a work in progress ⚠️</h3>
             <p class="distribution-note">
+                I'm sure there's a proper data source for this, but I don't have it yet, so here's Claude's approximation.
                 Approximate distribution of artists on Last.fm based on a <a href="https://en.wikipedia.org/wiki/Power_law" target="_blank" rel="noopener noreferrer">power law</a> pattern.
-                In a power law distribution, a small percentage of artists have the vast majority of listeners, while most artists have relatively few listeners. I'm sure there's a proper data source for this, but I don't have it yet.
+                In a power law distribution, a small percentage of artists have the vast majority of listeners, while most artists have relatively few listeners.
                 These percentages are estimated based on typical music industry patterns:
             </p>
             <div class="distribution-bars">
