@@ -4,6 +4,7 @@ A personal Last.fm dashboard showing real-time listening activity, top artists, 
 Currently hosted at https://bennymagid.com/ears/
 
 <img width="2547" height="1870" alt="image" src="https://github.com/user-attachments/assets/65d25c8e-d2b5-4aad-ba00-425d6d2cd92a" />
+<img width="2624" height="1841" alt="image" src="https://github.com/user-attachments/assets/5dd94ac1-526f-4bd8-998b-ee23c7a1d963" />
 <img width="2512" height="2010" alt="image" src="https://github.com/user-attachments/assets/c7560267-a977-4052-b7b9-f7c55914a940" />
 <img width="2508" height="1960" alt="image" src="https://github.com/user-attachments/assets/6feabc47-2f73-4d01-bbbf-873230c29402" />
 
