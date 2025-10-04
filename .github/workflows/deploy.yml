@@ -13,19 +13,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Debug key secret
-      run: |
-        if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-          echo "❌ SSH_PRIVATE_KEY is empty"
-        else
-          echo "✅ SSH_PRIVATE_KEY loaded with $(( $(echo "${{ secrets.SSH_PRIVATE_KEY }}" | wc -c) )) characters"
-        fi
-
     - name: Deploy to server
       uses: appleboy/scp-action@master
       with:
-        host: ${{ vars.SSH_HOST }}
-        username: ${{ vars.SSH_USERNAME }}
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         source: "app.py,main.cgi,.htaccess,requirements.txt,static,templates"
         target: "/home/bennymagid/public_html/ears"
@@ -34,8 +26,8 @@ jobs:
     - name: Fix ownership, permissions, restart
       uses: appleboy/ssh-action@master
       with:
-        host: ${{ vars.SSH_HOST }}
-        username: ${{ vars.SSH_USERNAME }}
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
           cd /home/bennymagid/public_html/ears
