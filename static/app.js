@@ -11,25 +11,19 @@ const GLOBAL_ARTIST_DISTRIBUTION = {
     'Ultra Hipster': 47   // ~47% (<100 listeners)
 };
 
+// Helper function to read CSS custom properties
+function getCSSColor(varName) {
+    return getComputedStyle(document.documentElement)
+        .getPropertyValue(varName).trim();
+}
+
 function getHipsterColors() {
-    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-    if (theme === 'light') {
-        return {
-            'Ultra Hipster': '#8839ef',   // mauve (Latte)
-            'Underground': '#7287fd',      // lavender (Latte)
-            'Indie': '#ea76cb',            // pink (Latte)
-            'Popular': '#1e66f5',          // blue (Latte)
-            'Mainstream': '#40a02b'        // green (Latte)
-        };
-    }
-
     return {
-        'Ultra Hipster': '#cba6f7',   // mauve (Mocha)
-        'Underground': '#b4befe',      // lavender (Mocha)
-        'Indie': '#f5c2e7',            // pink (Mocha)
-        'Popular': '#89b4fa',          // blue (Mocha)
-        'Mainstream': '#a6e3a1'        // green (Mocha)
+        'Ultra Hipster': getCSSColor('--ctp-mauve'),
+        'Underground': getCSSColor('--ctp-lavender'),
+        'Indie': getCSSColor('--ctp-pink'),
+        'Popular': getCSSColor('--ctp-blue'),
+        'Mainstream': getCSSColor('--ctp-green')
     };
 }
 
@@ -331,35 +325,25 @@ let hipsterDonutChart = null;
 
 // Catppuccin color palette for chart lines
 function getChartColors() {
-    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-    if (theme === 'light') {
-        return [
-            { border: '#8839ef', bg: 'rgba(136, 57, 239, 0.1)' },  // mauve (Latte)
-            { border: '#1e66f5', bg: 'rgba(30, 102, 245, 0.1)' },  // blue (Latte)
-            { border: '#40a02b', bg: 'rgba(64, 160, 43, 0.1)' },   // green (Latte)
-            { border: '#fe640b', bg: 'rgba(254, 100, 11, 0.1)' },  // peach (Latte)
-            { border: '#ea76cb', bg: 'rgba(234, 118, 203, 0.1)' }, // pink (Latte)
-            { border: '#04a5e5', bg: 'rgba(4, 165, 229, 0.1)' },   // sky (Latte)
-            { border: '#df8e1d', bg: 'rgba(223, 142, 29, 0.1)' },  // yellow (Latte)
-            { border: '#179299', bg: 'rgba(23, 146, 153, 0.1)' },  // teal (Latte)
-            { border: '#7287fd', bg: 'rgba(114, 135, 253, 0.1)' }, // lavender (Latte)
-            { border: '#d20f39', bg: 'rgba(210, 15, 57, 0.1)' }    // red (Latte)
-        ];
+    // Helper to convert hex to rgba with opacity
+    function hexToRgba(hex, opacity) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
     }
 
-    return [
-        { border: '#cba6f7', bg: 'rgba(203, 166, 247, 0.1)' }, // mauve (Mocha)
-        { border: '#89b4fa', bg: 'rgba(137, 180, 250, 0.1)' }, // blue (Mocha)
-        { border: '#a6e3a1', bg: 'rgba(166, 227, 161, 0.1)' }, // green (Mocha)
-        { border: '#fab387', bg: 'rgba(250, 179, 135, 0.1)' }, // peach (Mocha)
-        { border: '#f5c2e7', bg: 'rgba(245, 194, 231, 0.1)' }, // pink (Mocha)
-        { border: '#89dceb', bg: 'rgba(137, 220, 235, 0.1)' }, // sky (Mocha)
-        { border: '#f9e2af', bg: 'rgba(249, 226, 175, 0.1)' }, // yellow (Mocha)
-        { border: '#94e2d5', bg: 'rgba(148, 226, 213, 0.1)' }, // teal (Mocha)
-        { border: '#b4befe', bg: 'rgba(180, 190, 254, 0.1)' }, // lavender (Mocha)
-        { border: '#f38ba8', bg: 'rgba(243, 139, 168, 0.1)' }  // red (Mocha)
-    ];
+    const colorVars = ['--ctp-mauve', '--ctp-blue', '--ctp-green', '--ctp-peach',
+                       '--ctp-pink', '--ctp-sky', '--ctp-yellow', '--ctp-teal',
+                       '--ctp-lavender', '--ctp-red'];
+
+    return colorVars.map(varName => {
+        const color = getCSSColor(varName);
+        return {
+            border: color,
+            bg: hexToRgba(color, 0.1)
+        };
+    });
 }
 
 function getWeeksForPeriod(period) {
@@ -375,19 +359,10 @@ function getWeeksForPeriod(period) {
 }
 
 function getChartTextColors() {
-    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
-
-    if (theme === 'light') {
-        return {
-            text: '#4c4f69',    // Catppuccin Latte text
-            grid: '#acb0be'     // Catppuccin Latte surface2
-        };
-    } else {
-        return {
-            text: '#cdd6f4',    // Catppuccin Mocha text
-            grid: '#45475a'     // Catppuccin Mocha surface1
-        };
-    }
+    return {
+        text: getCSSColor('--ctp-text'),
+        grid: getCSSColor('--ctp-surface1')
+    };
 }
 
 function initializeChart() {
@@ -1233,6 +1208,14 @@ function applyTheme(theme) {
 
     // Update chart colors to match new theme
     updateChartColors();
+
+    // Re-render sections with hipster colors to reflect new theme
+    loadLastPlayed();
+    loadTracks();
+    loadTopArtists(currentPeriod);
+
+    const statsPeriod = document.getElementById('stats-period-selector').value;
+    loadMusicStats(statsPeriod);
 
     // Update active state
     setThemeActive(theme);
