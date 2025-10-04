@@ -885,6 +885,10 @@ a.artist-item {
         font-size: 2rem;
     }
 
+    .control-label {
+        display: none;
+    }
+
     .hero-content {
         flex-direction: column;
         text-align: center;
