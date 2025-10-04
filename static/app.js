@@ -11,6 +11,28 @@ const GLOBAL_ARTIST_DISTRIBUTION = {
     'Ultra Hipster': 47   // ~47% (<100 listeners)
 };
 
+function getHipsterColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+    if (theme === 'light') {
+        return {
+            'Ultra Hipster': '#8839ef',   // mauve (Latte)
+            'Underground': '#7287fd',      // lavender (Latte)
+            'Indie': '#ea76cb',            // pink (Latte)
+            'Popular': '#1e66f5',          // blue (Latte)
+            'Mainstream': '#40a02b'        // green (Latte)
+        };
+    }
+
+    return {
+        'Ultra Hipster': '#cba6f7',   // mauve (Mocha)
+        'Underground': '#b4befe',      // lavender (Mocha)
+        'Indie': '#f5c2e7',            // pink (Mocha)
+        'Popular': '#89b4fa',          // blue (Mocha)
+        'Mainstream': '#a6e3a1'        // green (Mocha)
+    };
+}
+
 function getTimeAgo(timestamp) {
     const now = Math.floor(Date.now() / 1000);
     const diff = now - timestamp;
@@ -40,12 +62,13 @@ function getHipsterCutoffs() {
 }
 
 function getHipsterColor(score) {
-    // Catppuccin Mocha colors
-    if (score >= 85) return '#cba6f7'; // mauve
-    if (score >= 60) return '#b4befe'; // lavender
-    if (score >= 35) return '#fab387'; // peach
-    if (score >= 10) return '#89b4fa'; // blue
-    return '#a6e3a1'; // green
+    const colors = getHipsterColors();
+
+    if (score >= 85) return colors['Ultra Hipster'];
+    if (score >= 60) return colors['Underground'];
+    if (score >= 35) return colors['Indie'];
+    if (score >= 10) return colors['Popular'];
+    return colors['Mainstream'];
 }
 
 function scoreToListeners(score) {
@@ -284,6 +307,9 @@ async function loadTopArtists(period = '7day') {
             }
         }).join('');
 
+        // Load history for these artists
+        loadArtistHistory(artists, period);
+
         return artists;
     } catch (error) {
         document.getElementById('top-artists').innerHTML =
@@ -297,24 +323,44 @@ let artistChart = null;
 let chartArtists = []; // Track which artists are currently in the chart
 let chartLabels = null;
 let currentPeriod = '1month';
+const artistHistoryCache = {}; // Cache by period
 
 let genreChart = null;
 let genreBarChart = null;
 let hipsterDonutChart = null;
 
 // Catppuccin color palette for chart lines
-const chartColors = [
-    { border: '#cba6f7', bg: 'rgba(203, 166, 247, 0.1)' }, // mauve
-    { border: '#89b4fa', bg: 'rgba(137, 180, 250, 0.1)' }, // blue
-    { border: '#a6e3a1', bg: 'rgba(166, 227, 161, 0.1)' }, // green
-    { border: '#fab387', bg: 'rgba(250, 179, 135, 0.1)' }, // peach
-    { border: '#f5c2e7', bg: 'rgba(245, 194, 231, 0.1)' }, // pink
-    { border: '#89dceb', bg: 'rgba(137, 220, 235, 0.1)' }, // sky
-    { border: '#f9e2af', bg: 'rgba(249, 226, 175, 0.1)' }, // yellow
-    { border: '#94e2d5', bg: 'rgba(148, 226, 213, 0.1)' }, // teal
-    { border: '#b4befe', bg: 'rgba(180, 190, 254, 0.1)' }, // lavender
-    { border: '#f38ba8', bg: 'rgba(243, 139, 168, 0.1)' }  // red
-];
+function getChartColors() {
+    const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+
+    if (theme === 'light') {
+        return [
+            { border: '#8839ef', bg: 'rgba(136, 57, 239, 0.1)' },  // mauve (Latte)
+            { border: '#1e66f5', bg: 'rgba(30, 102, 245, 0.1)' },  // blue (Latte)
+            { border: '#40a02b', bg: 'rgba(64, 160, 43, 0.1)' },   // green (Latte)
+            { border: '#fe640b', bg: 'rgba(254, 100, 11, 0.1)' },  // peach (Latte)
+            { border: '#ea76cb', bg: 'rgba(234, 118, 203, 0.1)' }, // pink (Latte)
+            { border: '#04a5e5', bg: 'rgba(4, 165, 229, 0.1)' },   // sky (Latte)
+            { border: '#df8e1d', bg: 'rgba(223, 142, 29, 0.1)' },  // yellow (Latte)
+            { border: '#179299', bg: 'rgba(23, 146, 153, 0.1)' },  // teal (Latte)
+            { border: '#7287fd', bg: 'rgba(114, 135, 253, 0.1)' }, // lavender (Latte)
+            { border: '#d20f39', bg: 'rgba(210, 15, 57, 0.1)' }    // red (Latte)
+        ];
+    }
+
+    return [
+        { border: '#cba6f7', bg: 'rgba(203, 166, 247, 0.1)' }, // mauve (Mocha)
+        { border: '#89b4fa', bg: 'rgba(137, 180, 250, 0.1)' }, // blue (Mocha)
+        { border: '#a6e3a1', bg: 'rgba(166, 227, 161, 0.1)' }, // green (Mocha)
+        { border: '#fab387', bg: 'rgba(250, 179, 135, 0.1)' }, // peach (Mocha)
+        { border: '#f5c2e7', bg: 'rgba(245, 194, 231, 0.1)' }, // pink (Mocha)
+        { border: '#89dceb', bg: 'rgba(137, 220, 235, 0.1)' }, // sky (Mocha)
+        { border: '#f9e2af', bg: 'rgba(249, 226, 175, 0.1)' }, // yellow (Mocha)
+        { border: '#94e2d5', bg: 'rgba(148, 226, 213, 0.1)' }, // teal (Mocha)
+        { border: '#b4befe', bg: 'rgba(180, 190, 254, 0.1)' }, // lavender (Mocha)
+        { border: '#f38ba8', bg: 'rgba(243, 139, 168, 0.1)' }  // red (Mocha)
+    ];
+}
 
 function getWeeksForPeriod(period) {
     const periodConfig = {
@@ -328,7 +374,7 @@ function getWeeksForPeriod(period) {
     return periodConfig[period] || { weeks: 12, aggregate: 'week' };
 }
 
-function getChartColors() {
+function getChartTextColors() {
     const theme = document.documentElement.getAttribute('data-theme') || 'dark';
 
     if (theme === 'light') {
@@ -345,7 +391,7 @@ function getChartColors() {
 }
 
 function initializeChart() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
     const ctx = document.getElementById('artist-chart').getContext('2d');
     artistChart = new Chart(ctx, {
         type: 'line',
@@ -369,6 +415,11 @@ function initializeChart() {
             scales: {
                 y: {
                     beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Cumulative Plays',
+                        color: colors.text
+                    },
                     ticks: {
                         color: colors.text,
                         maxTicksLimit: 10
@@ -378,6 +429,11 @@ function initializeChart() {
                     }
                 },
                 x: {
+                    title: {
+                        display: true,
+                        text: 'Date',
+                        color: colors.text
+                    },
                     ticks: {
                         color: colors.text
                     },
@@ -391,20 +447,39 @@ function initializeChart() {
 }
 
 function updateChartColors() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
+    const chartColors = getChartColors();
 
     // Update artist chart colors (if it exists)
     if (artistChart) {
+        // Update dataset colors
+        artistChart.data.datasets.forEach((dataset, index) => {
+            const color = chartColors[index % chartColors.length];
+            dataset.borderColor = color.border;
+            dataset.backgroundColor = color.bg;
+        });
+
         artistChart.options.plugins.legend.labels.color = colors.text;
         artistChart.options.scales.y.ticks.color = colors.text;
         artistChart.options.scales.y.grid.color = colors.grid;
+        artistChart.options.scales.y.title.color = colors.text;
         artistChart.options.scales.x.ticks.color = colors.text;
         artistChart.options.scales.x.grid.color = colors.grid;
+        artistChart.options.scales.x.title.color = colors.text;
         artistChart.update();
     }
 
     // Update genre chart colors
     if (genreChart) {
+        // Update dataset colors
+        genreChart.data.datasets.forEach((dataset, index) => {
+            const color = chartColors[index % chartColors.length];
+            dataset.borderColor = color.border;
+            dataset.backgroundColor = color.bg;
+            dataset.pointBackgroundColor = color.border;
+            dataset.pointHoverBorderColor = color.border;
+        });
+
         genreChart.options.plugins.legend.labels.color = colors.text;
         genreChart.options.scales.r.ticks.color = colors.text;
         genreChart.options.scales.r.grid.color = colors.grid;
@@ -414,6 +489,10 @@ function updateChartColors() {
 
     // Update genre bar chart colors
     if (genreBarChart) {
+        // Update dataset colors
+        genreBarChart.data.datasets[0].backgroundColor = genreBarChart.data.labels.map((_, i) => chartColors[i % chartColors.length].border);
+        genreBarChart.data.datasets[0].borderColor = genreBarChart.data.labels.map((_, i) => chartColors[i % chartColors.length].border);
+
         genreBarChart.options.plugins.legend.labels.color = colors.text;
         genreBarChart.options.scales.y.ticks.color = colors.text;
         genreBarChart.options.scales.y.grid.color = colors.grid;
@@ -425,6 +504,10 @@ function updateChartColors() {
 
     // Update hipster donut chart colors
     if (hipsterDonutChart) {
+        // Update dataset colors with hipster colors
+        const hipsterColors = getHipsterColors();
+        hipsterDonutChart.data.datasets[0].backgroundColor = hipsterDonutChart.data.labels.map(label => hipsterColors[label]);
+
         hipsterDonutChart.options.plugins.legend.labels.color = colors.text;
         hipsterDonutChart.update();
     }
@@ -442,6 +525,15 @@ function updateChartColors() {
         scoreFormulaChart.options.scales.y.grid.color = colors.grid;
         scoreFormulaChart.update();
     }
+
+    // Regenerate hipster explanation to update distribution bar colors
+    generateHipsterExplanation();
+
+    // Reinitialize score formula chart since the canvas was replaced
+    if (scoreFormulaChart) {
+        scoreFormulaChart.destroy();
+    }
+    initializeScoreFormulaChart();
 }
 
 async function toggleArtistInChart(artistName, period) {
@@ -483,6 +575,7 @@ async function toggleArtistInChart(artistName, period) {
             return cumulative;
         });
 
+        const chartColors = getChartColors();
         const color = chartColors[chartArtists.length % chartColors.length];
 
         chartArtists.push({ name: artistName, period: period });
@@ -509,9 +602,101 @@ async function toggleArtistInChart(artistName, period) {
     }
 }
 
+async function loadArtistHistory(artists, period) {
+    // Check cache first
+    if (artistHistoryCache[period]) {
+        updateChartWithCachedData(artistHistoryCache[period], period);
+        return;
+    }
+
+    const loadingElement = document.getElementById('chart-loading');
+    loadingElement.style.display = 'block';
+
+    const config = getWeeksForPeriod(period);
+    const historyData = {};
+
+    try {
+        // Fetch history for all artists in parallel
+        const promises = artists.map(artist =>
+            fetch(`api/lastfm/artist-history/${encodeURIComponent(artist.name)}?weeks=${config.weeks}&aggregate=${config.aggregate}`)
+                .then(r => r.json())
+                .then(history => ({ name: artist.name, history }))
+                .catch(err => {
+                    console.error(`Error loading history for ${artist.name}:`, err);
+                    return { name: artist.name, history: [] };
+                })
+        );
+
+        const results = await Promise.all(promises);
+        results.forEach(({ name, history }) => {
+            historyData[name] = history;
+        });
+
+        // Cache it
+        artistHistoryCache[period] = historyData;
+
+        // Update chart
+        updateChartWithCachedData(historyData, period);
+    } catch (error) {
+        console.error('Error loading artist history:', error);
+    } finally {
+        loadingElement.style.display = 'none';
+    }
+}
+
+function updateChartWithCachedData(historyData, period) {
+    // Clear current chart
+    artistChart.data.datasets = [];
+    chartArtists = [];
+
+    const artistNames = Object.keys(historyData);
+    if (artistNames.length === 0) return;
+
+    // Set labels from first artist
+    const firstHistory = historyData[artistNames[0]];
+    if (!firstHistory || firstHistory.length === 0) return;
+
+    chartLabels = firstHistory.map(week => {
+        const date = new Date(parseInt(week.week_start) * 1000);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    });
+    artistChart.data.labels = chartLabels;
+
+    // Add all artists
+    artistNames.forEach((name, index) => {
+        const history = historyData[name];
+        if (!history || history.length === 0) return;
+
+        let cumulative = 0;
+        const data = history.map(week => {
+            cumulative += week.playcount;
+            return cumulative;
+        });
+
+        const chartColors = getChartColors();
+        const color = chartColors[index % chartColors.length];
+        chartArtists.push({ name, period });
+
+        artistChart.data.datasets.push({
+            label: name,
+            data: data,
+            borderColor: color.border,
+            backgroundColor: color.bg,
+            borderWidth: 2,
+            tension: 0,
+            cubicInterpolationMode: 'monotone',
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+        });
+    });
+
+    artistChart.update('none');
+}
+
 
 function initializeGenreChart() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
     const ctx = document.getElementById('genre-chart').getContext('2d');
     genreChart = new Chart(ctx, {
         type: 'radar',
@@ -588,6 +773,7 @@ async function loadGenreProfile() {
             '12month': 'This Year'
         };
 
+        const chartColors = getChartColors();
         genreChart.data.datasets = periods.map((period, index) => {
             const periodData = data[period] || {};
             const values = genreChart.data.labels.map(genre => periodData[genre] || 0);
@@ -619,7 +805,8 @@ async function loadGenreProfile() {
 }
 
 function initializeGenreBarChart() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
+    const chartColors = getChartColors();
     const ctx = document.getElementById('genre-bar-chart').getContext('2d');
     genreBarChart = new Chart(ctx, {
         type: 'bar',
@@ -683,6 +870,7 @@ async function loadTopGenresBar(period = '1month') {
         genreBarChart.data.datasets[0].data = data.map(item => item.count);
 
         // Assign colors
+        const chartColors = getChartColors();
         genreBarChart.data.datasets[0].backgroundColor = data.map((_, i) => chartColors[i % chartColors.length].border);
         genreBarChart.data.datasets[0].borderColor = data.map((_, i) => chartColors[i % chartColors.length].border);
 
@@ -695,17 +883,8 @@ async function loadTopGenresBar(period = '1month') {
 }
 
 function initializeHipsterDonut() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
     const ctx = document.getElementById('hipster-donut').getContext('2d');
-
-    // Hipster category colors (matching getHipsterColor function)
-    const hipsterColors = {
-        'Ultra Hipster': '#cba6f7',   // mauve
-        'Underground': '#b4befe',      // lavender
-        'Indie': '#fab387',            // peach
-        'Popular': '#89b4fa',          // blue
-        'Mainstream': '#a6e3a1'        // green
-    };
 
     hipsterDonutChart = new Chart(ctx, {
         type: 'doughnut',
@@ -742,7 +921,7 @@ function initializeHipsterDonut() {
 let scoreFormulaChart = null;
 
 function initializeScoreFormulaChart() {
-    const colors = getChartColors();
+    const colors = getChartTextColors();
     const ctx = document.getElementById('score-formula-chart').getContext('2d');
 
     // Generate data points for the formula curve
@@ -897,22 +1076,8 @@ async function loadMusicStats(period = '1month') {
 
         // Set color based on score
         const scoreElement = document.getElementById('avg-hipster-score');
-        if (avgScore >= 85) {
-            scoreElement.style.color = '#cba6f7'; // mauve
-            document.getElementById('hipster-label').textContent = '🎸 Ultra Hipster';
-        } else if (avgScore >= 60) {
-            scoreElement.style.color = '#b4befe'; // lavender
-            document.getElementById('hipster-label').textContent = '🎭 Underground';
-        } else if (avgScore >= 35) {
-            scoreElement.style.color = '#fab387'; // peach
-            document.getElementById('hipster-label').textContent = '🎪 Indie';
-        } else if (avgScore >= 10) {
-            scoreElement.style.color = '#89b4fa'; // blue
-            document.getElementById('hipster-label').textContent = '📻 Popular';
-        } else {
-            scoreElement.style.color = '#a6e3a1'; // green
-            document.getElementById('hipster-label').textContent = '🔥 Mainstream';
-        }
+        scoreElement.style.color = getHipsterColor(avgScore);
+        document.getElementById('hipster-label').textContent = getHipsterLabel(avgScore);
 
         // Populate dynamic cutoffs
         const cutoffs = getHipsterCutoffs();
@@ -923,16 +1088,8 @@ async function loadMusicStats(period = '1month') {
         const distribution = data.hipsterDistribution;
         const labels = Object.keys(distribution).filter(key => distribution[key] > 0);
         const values = labels.map(label => distribution[label]);
-        const colors = labels.map(label => {
-            const colorMap = {
-                'Ultra Hipster': '#cba6f7',
-                'Underground': '#b4befe',
-                'Indie': '#fab387',
-                'Popular': '#89b4fa',
-                'Mainstream': '#a6e3a1'
-            };
-            return colorMap[label];
-        });
+        const hipsterColors = getHipsterColors();
+        const colors = labels.map(label => hipsterColors[label]);
 
         hipsterDonutChart.data.labels = labels;
         hipsterDonutChart.data.datasets[0].data = values;
@@ -999,6 +1156,30 @@ document.getElementById('stats-period-selector').addEventListener('change', asyn
     loadMusicStats(e.target.value);
 });
 
+// Generic toggle handler
+function initializeToggleGroup(groupName, onToggle) {
+    const buttons = document.querySelectorAll(`[data-group="${groupName}"]`);
+
+    buttons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const value = e.currentTarget.dataset.value;
+
+            // Update active state
+            buttons.forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+
+            // Callback
+            onToggle(value);
+        });
+    });
+
+    return (value) => {
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === value);
+        });
+    };
+}
+
 // Live mode toggle
 let refreshInterval = null;
 
@@ -1012,11 +1193,6 @@ function startLiveMode() {
         loadTopArtists(selectedPeriod);
     }, 30000);
 
-    // Update button
-    const button = document.getElementById('live-mode-toggle');
-    button.querySelector('.control-icon').textContent = '🔴';
-    button.querySelector('.control-label').textContent = 'Live';
-
     localStorage.setItem('liveMode', 'true');
 }
 
@@ -1026,20 +1202,15 @@ function stopLiveMode() {
         refreshInterval = null;
     }
 
-    // Update button
-    const button = document.getElementById('live-mode-toggle');
-    button.querySelector('.control-icon').textContent = '⚫';
-    button.querySelector('.control-label').textContent = 'Paused';
-
     localStorage.setItem('liveMode', 'false');
 }
 
-// Live mode button click handler
-document.getElementById('live-mode-toggle').addEventListener('click', () => {
-    if (refreshInterval) {
-        stopLiveMode();
-    } else {
+// Initialize live mode toggle
+const setLiveModeActive = initializeToggleGroup('live-mode', (value) => {
+    if (value === 'live') {
         startLiveMode();
+    } else {
+        stopLiveMode();
     }
 });
 
@@ -1058,25 +1229,19 @@ function applyTheme(theme) {
         root.setAttribute('data-theme', theme);
     }
 
-    // Update button
-    const button = document.getElementById('theme-toggle');
-    const icons = { system: '💻', light: '☀️', dark: '🌙' };
-    const labels = { system: 'System', light: 'Light', dark: 'Dark' };
-
-    button.querySelector('.control-icon').textContent = icons[theme];
-    button.querySelector('.control-label').textContent = labels[theme];
-
     localStorage.setItem('theme', theme);
 
     // Update chart colors to match new theme
     updateChartColors();
+
+    // Update active state
+    setThemeActive(theme);
 }
 
-// Theme button click handler
-document.getElementById('theme-toggle').addEventListener('click', () => {
-    currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-    const theme = themes[currentThemeIndex];
-    applyTheme(theme);
+// Initialize theme toggle
+const setThemeActive = initializeToggleGroup('theme', (value) => {
+    applyTheme(value);
+    currentThemeIndex = themes.indexOf(value);
 });
 
 // Listen for system theme changes when in system mode
@@ -1092,8 +1257,10 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e)
 const savedLiveMode = localStorage.getItem('liveMode');
 if (savedLiveMode === 'false') {
     stopLiveMode();
+    setLiveModeActive('paused');
 } else {
-    startLiveMode(); // Default to live mode
+    startLiveMode();
+    setLiveModeActive('live');
 }
 
 const savedTheme = localStorage.getItem('theme') || 'system';

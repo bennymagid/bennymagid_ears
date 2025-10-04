@@ -19,14 +19,31 @@
                     href="https://www.last.fm/user/bmahid">Last.fm</a> or my <a
                     href="https://open.spotify.com/user/1287562186">Spotify</a> for more</a></subtitle>
             <div class="controls">
-                <button id="live-mode-toggle" class="control-button" title="Toggle auto-refresh">
-                    <span class="control-icon">🔴</span>
-                    <span class="control-label">Live</span>
-                </button>
-                <button id="theme-toggle" class="control-button" title="Toggle theme">
-                    <span class="control-icon">💻</span>
-                    <span class="control-label">System</span>
-                </button>
+                <div class="toggle-group">
+                    <button class="toggle-option" data-group="live-mode" data-value="live" title="Live mode">
+                        <span class="control-icon">🔴</span>
+                        <span class="control-label">Live</span>
+                    </button>
+                    <button class="toggle-option" data-group="live-mode" data-value="paused" title="Paused">
+                        <span class="control-icon">⚫</span>
+                        <span class="control-label">Paused</span>
+                    </button>
+                </div>
+
+                <div class="toggle-group">
+                    <button class="toggle-option" data-group="theme" data-value="dark" title="Dark theme">
+                        <span class="control-icon">🌙</span>
+                        <span class="control-label">Dark</span>
+                    </button>
+                    <button class="toggle-option" data-group="theme" data-value="light" title="Light theme">
+                        <span class="control-icon">☀️</span>
+                        <span class="control-label">Light</span>
+                    </button>
+                    <button class="toggle-option" data-group="theme" data-value="system" title="System theme">
+                        <span class="control-icon">💻</span>
+                        <span class="control-label">System</span>
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -147,7 +164,8 @@
         </section>
 
         <footer class="footer">
-            Made with ❤️ by <a href="https://bennymagid.com">Benny Magid</a>
+            Made with ❤️ by <a href="https://bennymagid.com">Benny Magid</a><br>
+            Built with <a href="https://www.claude.com/product/claude-code">Claude Code</a> • Colors from <a href="https://catppuccin.com/palette/">Catppuccin</a> • <a href="https://github.com/bennymagid/last_fm_reader">GitHub</a>
         </footer>
     </div>
 

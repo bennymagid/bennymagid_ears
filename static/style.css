@@ -64,12 +64,17 @@
     box-sizing: border-box;
 }
 
+html {
+    overflow-x: hidden;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     /* background: linear-gradient(135deg, var(--ctp-base) 0%, var(--ctp-mantle) 100%); */
     min-height: 100vh;
     padding: 20px;
     background-color: var(--ctp-base);
+    overflow-x: hidden;
 }
 
 a {
@@ -124,15 +129,23 @@ header h1 {
     margin-top: 20px;
 }
 
-.control-button {
+.toggle-group {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
     background: var(--ctp-surface0);
     border: 1px solid var(--ctp-surface1);
     border-radius: 8px;
-    color: var(--ctp-text);
+    overflow: hidden;
+}
+
+.toggle-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--ctp-surface1);
+    color: var(--ctp-subtext0);
     cursor: pointer;
     font-family: inherit;
     font-size: 0.9rem;
@@ -140,9 +153,17 @@ header h1 {
     transition: all 0.2s;
 }
 
-.control-button:hover {
+.toggle-option:last-child {
+    border-right: none;
+}
+
+.toggle-option:hover {
     background: var(--ctp-surface1);
-    border-color: var(--ctp-mauve);
+}
+
+.toggle-option.active {
+    background: var(--ctp-mauve);
+    color: var(--ctp-crust);
 }
 
 .control-icon {
